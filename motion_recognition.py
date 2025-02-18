@@ -1,8 +1,47 @@
 import cv2
 import time
 
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
+
+from ENV import ENV
+
+# Lofi Girl - beats to relax/study to のプレイリストID
+PLAYLIST_ID = "0vvXsWCC9xrXsKd4FyS8kM"
+
+CLIENT_ID = ENV.CLIENT_ID
+CLIENT_SECRET = ENV.CLIENT_SECRET
+REDIRECT_URI = ENV.REDIRECT_URI  # リダイレクトURIを設定
+
+SCOPE = "user-modify-playback-state,user-read-playback-state"
+
+auth_manager = SpotifyOAuth(
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET,
+    redirect_uri=REDIRECT_URI,
+    scope=SCOPE
+)
+
+sp = spotipy.Spotify(auth_manager=auth_manager)
+
+tracks = sp.playlist_items(PLAYLIST_ID)
+
+# アクティブなデバイスを取得
+devices = sp.devices()
+
+# デバイス名がDESKTOP-OG9460IであるデバイスのIDを取得
+device_id = None
+for device in devices['devices']:
+    if device['name'] == ENV.DEVICE_NAME:
+        device_id = device['id']
+        break
+
+# 取得したプレイリストからランダムに一つ再生する
+track = tracks['items'][0]['track']['uri']
+sp.start_playback(device_id=device_id, uris=[track])
+
 # 動画の読み込み
-movie = cv2.VideoCapture('movie.mp4')
+movie = cv2.VideoCapture(0)
 
 # 枠線の色を赤に設定
 red = (0, 0, 255)
@@ -55,12 +94,16 @@ while True:
         if not motion_detected:
             print("検知されました")
             motion_detected = True
+            # 音楽を再生
+            sp.start_playback(device_id=device_id, uris=[track])
     else:
         # 5分間動体が検知されなかった場合
-        if time.time() - last_motion_time > 300:
+        if time.time() - last_motion_time > 10:
             if motion_detected:
                 print("5分間検知されていません")
                 motion_detected = False
+                # 音楽を停止
+                sp.pause_playback(device_id=device_id)
 
     # ウィンドウでの再生速度を元動画と合わせる
     time.sleep(1/fps)
