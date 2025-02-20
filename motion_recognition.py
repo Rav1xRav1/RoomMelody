@@ -41,7 +41,7 @@ track = tracks['items'][0]['track']['uri']
 sp.start_playback(device_id=device_id, uris=[track])
 
 # 動画の読み込み
-movie = cv2.VideoCapture(0)
+movie = cv2.VideoCapture(1)
 
 # 枠線の色を赤に設定
 red = (0, 0, 255)
@@ -54,12 +54,18 @@ fps = int(movie.get(cv2.CAP_PROP_FPS))
 last_motion_time = time.time()
 # 動体が検知されているかどうかのフラグ
 motion_detected = False
+# 動体が検知された回数をカウントする変数
+motion_detected_count = 0
+# 動体が検知された回数の閾値
+MOTION_DETECTION_THRESHOLD = 5
 
 while True:
     # 画像を取得
     ret, frame = movie.read()
     # 再生が終了したらループを抜ける
     if ret == False: break
+    # 画像を上下逆にする
+    frame = cv2.flip(frame, 0)
     # 画像を白黒に変換
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -91,12 +97,14 @@ while True:
     # 動体が検知された場合
     if motion_in_frame:
         last_motion_time = time.time()
-        if not motion_detected:
+        motion_detected_count += 1
+        if not motion_detected and motion_detected_count >= MOTION_DETECTION_THRESHOLD:
             print("検知されました")
             motion_detected = True
             # 音楽を再生
             sp.start_playback(device_id=device_id, uris=[track])
     else:
+        motion_detected_count = 0
         # 5分間動体が検知されなかった場合
         if time.time() - last_motion_time > 10:
             if motion_detected:
