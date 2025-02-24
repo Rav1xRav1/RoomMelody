@@ -38,6 +38,7 @@ for device in devices['devices']:
 
 # 取得したプレイリストからランダムに一つ再生する
 track = tracks['items'][0]['track']['uri']
+
 sp.start_playback(device_id=device_id, uris=[track])
 
 # 動画の読み込み
@@ -48,7 +49,7 @@ red = (0, 0, 255)
 # 前回の画像を保存する変数
 before = None
 # 動画のFPSを取得
-fps = int(movie.get(cv2.CAP_PROP_FPS))
+# fps = int(movie.get(cv2.CAP_PROP_FPS))
 
 # 最後に動体が検知された時間を記録
 last_motion_time = time.time()
@@ -75,7 +76,7 @@ while True:
         continue
 
     # 現在のフレームと前回のフレームの移動平均との差を計算
-    cv2.accumulateWeighted(gray, before, 0.5)
+    cv2.accumulateWeighted(gray, before, 0.8)
     frameDelta = cv2.absdiff(gray, cv2.convertScaleAbs(before))
     # frameDeltaの画像を2値化
     thresh = cv2.threshold(frameDelta, 3, 255, cv2.THRESH_BINARY)[1]
@@ -100,9 +101,18 @@ while True:
         motion_detected_count += 1
         if not motion_detected and motion_detected_count >= MOTION_DETECTION_THRESHOLD:
             print("検知されました")
+            print(sp.current_playback())
             motion_detected = True
-            # 音楽を再生
-            sp.start_playback(device_id=device_id, uris=[track])
+            # Spotifyの再生状態を取得
+            playback_state = sp.current_playback()
+            try:
+                # Spotifyが再生中でない場合のみ再生を開始
+                if playback_state and not playback_state['is_playing']:
+                    sp.start_playback(device_id=device_id)
+                else:
+                    sp.start_playback(device_id=device_id, uris=[track])
+            except spotipy.exceptions.SpotifyException as e:
+                print(f"Spotify再生エラーs: {e}")
     else:
         motion_detected_count = 0
         # 5分間動体が検知されなかった場合
@@ -110,11 +120,14 @@ while True:
             if motion_detected:
                 print("5分間検知されていません")
                 motion_detected = False
-                # 音楽を停止
-                sp.pause_playback(device_id=device_id)
+                try:
+                    # 音楽を停止
+                    sp.pause_playback(device_id=device_id)
+                except spotipy.exceptions.SpotifyException as e:
+                    print(f"Spotify停止エラー: {e}")
 
     # ウィンドウでの再生速度を元動画と合わせる
-    time.sleep(1/fps)
+    # time.sleep(1/fps)
     # ウィンドウで表示
     cv2.imshow('target_frame', frame)
     # Enterキーが押されたらループを抜ける
