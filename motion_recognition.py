@@ -75,6 +75,8 @@ while True:
         before = gray.astype("float")
         continue
 
+    # 差計算の重み
+    weight = 0.8
     # 現在のフレームと前回のフレームの移動平均との差を計算
     cv2.accumulateWeighted(gray, before, 0.8)
     frameDelta = cv2.absdiff(gray, cv2.convertScaleAbs(before))
