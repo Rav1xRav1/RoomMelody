@@ -1,5 +1,6 @@
 import cv2
 import time
+import os
 
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
@@ -60,6 +61,10 @@ motion_detected_count = 0
 # 動体が検知された回数の閾値
 MOTION_DETECTION_THRESHOLD = 5
 
+# 保存先ディレクトリを設定
+SAVE_DIR = "detected_frames"
+os.makedirs(SAVE_DIR, exist_ok=True)
+
 while True:
     # 画像を取得
     ret, frame = movie.read()
@@ -105,6 +110,9 @@ while True:
             print("検知されました")
             print(sp.current_playback())
             motion_detected = True
+            # 検知されたフレームを保存
+            timestamp = time.strftime("%Y%m%d-%H%M%S")
+            cv2.imwrite(os.path.join(SAVE_DIR, f"detected_{timestamp}.jpg"), frame)
             # Spotifyの再生状態を取得
             playback_state = sp.current_playback()
             try:
@@ -114,7 +122,7 @@ while True:
                 else:
                     sp.start_playback(device_id=device_id, uris=[track])
             except spotipy.exceptions.SpotifyException as e:
-                print(f"Spotify再生エラーs: {e}")
+                print(f"Spotify再生エラー: {e}")
     else:
         motion_detected_count = 0
         # 5分間動体が検知されなかった場合
