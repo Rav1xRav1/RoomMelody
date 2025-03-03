@@ -43,7 +43,7 @@ track = tracks['items'][0]['track']['uri']
 sp.start_playback(device_id=device_id, uris=[track])
 
 # 動画の読み込み
-movie = cv2.VideoCapture(1)
+movie = cv2.VideoCapture(0)
 
 # 枠線の色を赤に設定
 red = (0, 0, 255)
@@ -64,6 +64,17 @@ MOTION_DETECTION_THRESHOLD = 5
 # 保存先ディレクトリを設定
 SAVE_DIR = "detected_frames"
 os.makedirs(SAVE_DIR, exist_ok=True)
+
+def fade_out_volume(sp, device_id, duration=5):
+    current_volume = sp.current_playback()['device']['volume_percent']
+    steps = 10
+    step_duration = duration / steps
+    volume_step = current_volume / steps
+
+    for i in range(steps):
+        new_volume = max(0, current_volume - volume_step * (i + 1))
+        sp.volume(int(new_volume), device_id)
+        time.sleep(step_duration)
 
 while True:
     # 画像を取得
@@ -107,22 +118,17 @@ while True:
         last_motion_time = time.time()
         motion_detected_count += 1
         if not motion_detected and motion_detected_count >= MOTION_DETECTION_THRESHOLD:
-            print("検知されました")
-            print(sp.current_playback())
             motion_detected = True
             # 検知されたフレームを保存
             timestamp = time.strftime("%Y%m%d-%H%M%S")
             cv2.imwrite(os.path.join(SAVE_DIR, f"detected_{timestamp}.jpg"), frame)
             # Spotifyの再生状態を取得
             playback_state = sp.current_playback()
-            try:
-                # Spotifyが再生中でない場合のみ再生を開始
-                if playback_state and not playback_state['is_playing']:
-                    sp.start_playback(device_id=device_id)
-                else:
-                    sp.start_playback(device_id=device_id, uris=[track])
-            except spotipy.exceptions.SpotifyException as e:
-                print(f"Spotify再生エラー: {e}")
+            # Spotifyが再生中でない場合のみ再生を開始
+            if playback_state and not playback_state['is_playing']:
+                sp.start_playback(device_id=device_id)
+            else:
+                sp.start_playback(device_id=device_id, uris=[track])
     else:
         motion_detected_count = 0
         # 5分間動体が検知されなかった場合
@@ -130,18 +136,16 @@ while True:
             if motion_detected:
                 print("5分間検知されていません")
                 motion_detected = False
-                try:
-                    # 音楽を停止
-                    sp.pause_playback(device_id=device_id)
-                except spotipy.exceptions.SpotifyException as e:
-                    print(f"Spotify停止エラー: {e}")
+                # 音楽をフェードアウトして停止
+                fade_out_volume(sp, device_id)
+                sp.pause_playback(device_id=device_id)
 
     # ウィンドウでの再生速度を元動画と合わせる
     # time.sleep(1/fps)
     # ウィンドウで表示
-    cv2.imshow('target_frame', frame)
+    # cv2.imshow('target_frame', frame)
     # Enterキーが押されたらループを抜ける
-    if cv2.waitKey(1) == 13: break
+    # if cv2.waitKey(1) == 13: break
 
 # ウィンドウを破棄
 cv2.destroyAllWindows()
