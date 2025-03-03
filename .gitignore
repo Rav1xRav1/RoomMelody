@@ -1,4 +1,5 @@
 /.venv/
+/.detected_frames/
 movie.mp4
 ENV.py
 .cache
