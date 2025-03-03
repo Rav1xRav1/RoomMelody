@@ -76,6 +76,16 @@ def fade_out_volume(sp, device_id, duration=5):
         sp.volume(int(new_volume), device_id)
         time.sleep(step_duration)
 
+def fade_in_volume(sp, device_id, target_volume=100, duration=5):
+    steps = 10
+    step_duration = duration / steps
+    volume_step = target_volume / steps
+
+    for i in range(steps):
+        new_volume = min(target_volume, volume_step * (i + 1))
+        sp.volume(int(new_volume), device_id)
+        time.sleep(step_duration)
+
 while True:
     # 画像を取得
     ret, frame = movie.read()
@@ -127,8 +137,10 @@ while True:
             # Spotifyが再生中でない場合のみ再生を開始
             if playback_state and not playback_state['is_playing']:
                 sp.start_playback(device_id=device_id)
+                fade_in_volume(sp, device_id)
             else:
                 sp.start_playback(device_id=device_id, uris=[track])
+                fade_in_volume(sp, device_id)
     else:
         motion_detected_count = 0
         # 5分間動体が検知されなかった場合
