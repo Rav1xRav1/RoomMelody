@@ -37,10 +37,14 @@ for device in devices['devices']:
         device_id = device['id']
         break
 
-# 取得したプレイリストからランダムに一つ再生する
-track = tracks['items'][0]['track']['uri']
+# 取得したプレイリストのトラックURIリストを作成
+track_uris = [item['track']['uri'] for item in tracks['items']]
 
-sp.start_playback(device_id=device_id, uris=[track])
+# シャッフルを有効に
+sp.shuffle(state=True, device_id=device_id)
+
+# プレイリスト全体を再生
+sp.start_playback(device_id=device_id, uris=track_uris)
 
 # 動画の読み込み
 movie = cv2.VideoCapture(0)
@@ -59,7 +63,7 @@ motion_detected = False
 # 動体が検知された回数をカウントする変数
 motion_detected_count = 0
 # 動体が検知された回数の閾値
-MOTION_DETECTION_THRESHOLD = 5
+MOTION_DETECTION_THRESHOLD = 10
 
 # 保存先ディレクトリを設定
 SAVE_DIR = "detected_frames"
@@ -139,12 +143,12 @@ while True:
                 sp.start_playback(device_id=device_id)
                 fade_in_volume(sp, device_id)
             else:
-                sp.start_playback(device_id=device_id, uris=[track])
+                sp.start_playback(device_id=device_id, uris=track_uris)
                 fade_in_volume(sp, device_id)
     else:
         motion_detected_count = 0
         # 5分間動体が検知されなかった場合
-        if time.time() - last_motion_time > 10:
+        if time.time() - last_motion_time > 300:
             if motion_detected:
                 print("5分間検知されていません")
                 motion_detected = False
